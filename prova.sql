@@ -26,12 +26,11 @@ CREATE DATABASE restauranteBD
 --3) COLOCANDO UMA SUBQUERY: Pensei em colocar uma forma de pesquisa, para verificar/organizar COZINHEIROS em relação as MASSAS (ou seja, realizei uma pesquisa dentro de uma pesquisa, em relação da tabela menu, não de cozinheiros).
 --4) ADICIONANDO FUNÇÃO: Função para calcular idade, simples. 
 --5) ADICIONANDO CTE: Pensei em mostrar uma tabela temporaria que tenha o nome do cozinheiro, e seu prato "chave"
+--6) LOOPS: Irei criar um loop que conta a quantidade de registros em cada tabela
+--7) PROCEDURES: Vou criar um procedimento para corrigir a tabela de clientes, que ao invés de estar "NULL", está escrito "NENHUMA"
 
 -- Uma coisa que percebi é as semelhanças entre "VIEW" e "CTE", algo que achei bem legal.
 -- A principal diferença é que com a CTE, consigo "Separar" quais colunas vão aparecer, como o própria definição diz, uma tabela temporária.
-
--- Faltou "LOOPS", "PROCEDURES" e "WINDOWS FUNCTIONS.
--- LOOPS pois não tive idéia em onde colocar, e os outros por falta de domínio.
 
 USE restauranteBD
 
@@ -113,7 +112,7 @@ END
 --testando:
 
 INSERT INTO CLIENTES (ID_CLIENTE, NOME, PREFERENCIA) VALUES
-	(5 , 'Helena', 'Vegano')
+	(7 , 'Jesonél', 'Vegano')
 
 --SUCESSO! Apareceu uma mensagem: "Helena foi adicionada com sucesso"
 
@@ -203,3 +202,66 @@ FROM cprato
 --Lembre de executar tudo junto.
 --O daora disso, é que podemos selecionar quais colunas queremos que aparecemos, diferente do view, deixando mais "simples"
 
+--Removendo clientes "testes"
+
+SELECT *
+FROM CLIENTES
+
+DELETE FROM CLIENTES WHERE ID_CLIENTE = 6
+DELETE FROM CLIENTES WHERE ID_CLIENTE = 7 
+
+--6) LOOPS
+-- Irei criar um loop que conta a quantidade de registros em cada tabela:
+
+DECLARE @tabelaAtual INT = 1;
+DECLARE @nomeTabela VARCHAR(50);
+DECLARE @quantidade INT;
+
+WHILE @tabelaAtual < 4
+-- Não sei se é correto utilizar números ao invés de variáveis quando usa loops neste caso.
+BEGIN
+    SET @nomeTabela = CASE @tabelaAtual
+                      WHEN 1 THEN 'CLIENTES'
+                      WHEN 2 THEN 'COZINHEIROS'
+                      WHEN 3 THEN 'MENU'
+                      END; 
+
+    DECLARE @sql NVARCHAR(MAX);
+    SET @sql = 'SELECT @quantidade = COUNT(*) FROM ' + @nomeTabela;
+
+    EXEC sp_executesql @sql, N'@quantidade INT OUTPUT', @quantidade OUTPUT;
+
+    PRINT 'A tabela ' + @nomeTabela + ' possui ' + CAST(@quantidade AS VARCHAR) + ' registros.';
+
+    SET @tabelaAtual = @tabelaAtual + 1;
+END
+
+--7) PROCEDURES
+-- Vou criar um procedimento para corrigir a tabela de clientes, que ao invés de estar "NULL", está escrito "NENHUMA"
+
+IF EXISTS (SELECT 1 FROM SYS.OBJECTS WHERE TYPE = 'P' AND NAME = 'corrige')
+     BEGIN
+         DROP PROCEDURE corrige
+     END
+GO
+
+CREATE PROCEDURE corrige
+@cliente INT
+AS 
+UPDATE CLIENTES
+SET PREFERENCIA = NULL
+WHERE ID_CLIENTE = @cliente
+GO
+
+EXEC corrige 2
+EXEC corrige 3
+
+SELECT *
+FROM CLIENTES
+
+--Deu certo, até que entendi bastante como usar o procedure.
+
+-- 8) WINDOWS FUNCTIONS
+-- Unico que não consegui utilizar de maneira "correta"
+-- Faltou "LOOPS", "PROCEDURES" e "WINDOWS FUNCTIONS.
+-- LOOPS pois não tive idéia em onde colocar, e os outros por falta de domínio.
